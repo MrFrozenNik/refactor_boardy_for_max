@@ -2,7 +2,7 @@ version: '3.8'
 services:
   laravel:
     build:
-      context: ./src/boardy-laravel
+      context: ./boardy-laravel
       dockerfile: Dockerfile
   fastapi:
     build:
