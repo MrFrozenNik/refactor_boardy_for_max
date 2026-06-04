@@ -48,21 +48,15 @@ jobs:
           REDIS_PASSWORD=null
           REDIS_PORT=6379
           ENVEOF
-      - name: Build images
-        run: docker compose -f docker-compose.yml -f docker-compose.local.yml build
       - name: Start stack
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+          docker compose up -d
           sleep 20
-      - name: Show MySQL logs
-        run: docker compose logs mysql
-      - name: Wait for services
-        run: sleep 10
       - name: Smoke test
         run: curl -f http://localhost/health-laravel || curl -f http://localhost/health || echo "Health check failed"
       - name: Tear down
         if: always()
-        run: docker compose -f docker-compose.yml -f docker-compose.local.yml down -v
+        run: docker compose down -v
   test:
     runs-on: ubuntu-latest
     needs: smoke
