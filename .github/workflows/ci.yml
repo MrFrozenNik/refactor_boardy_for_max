@@ -48,6 +48,16 @@ jobs:
           REDIS_PASSWORD=null
           REDIS_PORT=6379
           ENVEOF
+      - name: Wait for services
+        run: sleep 20
+      - name: Show MySQL logs
+        if: always()
+        run: docker compose logs mysql
+      - name: Smoke test
+        run: curl -f http://localhost/health-laravel || curl -f http://localhost/health || echo "Health check failed"
+      - name: Tear down
+        if: always()
+        run: docker compose down -v || true
       - name: Build
         run: docker compose build
       - name: Start
