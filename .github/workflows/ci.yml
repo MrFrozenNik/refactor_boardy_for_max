@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Create .env
         run: |
-          cat > boardy-laravel/.env << 'ENVEOF'
+          cat > .env << 'ENVEOF'
           APP_NAME=Boardy
           APP_ENV=testing
           APP_KEY=
@@ -36,6 +36,8 @@ jobs:
           MYSQL_DATABASE=boardy_laravel
           MYSQL_USER=boardy
           MYSQL_PASSWORD=boardy_password
+          DB_USER=boardy
+          DB_PASSWORD=boardy_password
           REDIS_HOST=redis
           REDIS_PASSWORD=null
           REDIS_PORT=6379
