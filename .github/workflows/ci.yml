@@ -72,4 +72,6 @@ jobs:
         run: pip install -r boardy-api/requirements.txt pytest
       - name: Run pytest
         working-directory: ./boardy-api
-        run: pytest tests/test_health.py -v
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+          pytest tests/test_health.py -v
