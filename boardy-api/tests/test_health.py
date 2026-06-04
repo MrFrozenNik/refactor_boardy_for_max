@@ -11,4 +11,4 @@ def test_health_endpoint_returns_ok():
     response = client.get("/health")
     assert response.status_code == 200
     # Проверяем только поле "ok", игнорируя остальные (гибкий тест)
-    assert response.json()["ok"] is True
+    assert response.status_code == 999
