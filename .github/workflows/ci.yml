@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: PHP syntax check
-        run: find boardy-laravel -name "*.php" -print0 | xargs -0 -n1 php -l 2>/dev/null || true
+        run: find src/boardy-laravel -name "*.php" -print0 | xargs -0 -n1 php -l 2>/dev/null || true
       - name: Python syntax check
         run: python -m compileall boardy-api/ -q 2>/dev/null || true
 
@@ -22,26 +22,28 @@ jobs:
       - name: Create .env file
         run: |
           cat > .env << 'ENVEOF'
-          DB_ROOT_PASSWORD=rootpassword
-          DB_DATABASE=boardy
-          DB_USERNAME=boardy_user
+          MYSQL_ROOT_PASSWORD=root_password
+          MYSQL_DATABASE=boardy_laravel
+          MYSQL_USER=boardy
+          MYSQL_PASSWORD=boardy_password
+          DB_HOST=mysql
+          DB_DATABASE=boardy_laravel
+          DB_USERNAME=boardy
           DB_PASSWORD=boardy_password
+          REDIS_HOST=redis
+          DB_USER=boardy
           ENVEOF
-          sed -i 's/^[[:space:]]*//' .env
-      - name: Build images
-        run: docker compose -f docker-compose.yml -f docker-compose.local.yml build
       - name: Start stack
         run: |
           docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
           sleep 15
       - name: Smoke endpoints
         run: |
-          curl -f http://localhost/health || echo "Health check failed"
-          curl -f http://localhost/api/health || echo "API health failed"
+          curl -f http://localhost/health-laravel || echo "Laravel health failed"
+          curl -f http://localhost/api/health || echo "FastAPI health failed"
       - name: Tear down
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.local.yml down -v || true
-
   test:
     runs-on: ubuntu-latest
     needs: smoke
