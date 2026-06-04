@@ -20,8 +20,15 @@ services:
     volumes:
       - ./src/boardy-laravel:/var/www/html
       - laravel_storage:/var/www/html/storage
-    env_file:
-      - ./src/boardy-laravel/.env
+    environment:
+      - APP_NAME=Boardy
+      - APP_ENV=testing
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_DATABASE=boardy
+      - DB_USERNAME=boardy_user
+      - DB_PASSWORD=boardy_password
+      - REDIS_HOST=redis
     depends_on:
       mysql:
         condition: service_healthy
