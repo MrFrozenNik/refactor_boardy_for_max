@@ -6,5 +6,5 @@ services:
       dockerfile: Dockerfile
   fastapi:
     build:
-      context: ./boardy-api
+      context: ./api
       dockerfile: Dockerfile

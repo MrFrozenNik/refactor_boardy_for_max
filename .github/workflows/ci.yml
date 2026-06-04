@@ -12,7 +12,7 @@ jobs:
       - name: PHP syntax check
         run: find src/boardy-laravel -name "*.php" -print0 | xargs -0 -n1 php -l 2>/dev/null || true
       - name: Python syntax check
-        run: python -m compileall boardy-api/ -q 2>/dev/null || true
+        run: python -m compileall api/ -q 2>/dev/null || true
 
   smoke:
     runs-on: ubuntu-latest
@@ -69,9 +69,9 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install Python deps
-        run: pip install -r boardy-api/requirements.txt pytest
+        run: pip install -r api/requirements.txt pytest
       - name: Run pytest
-        working-directory: ./boardy-api
+        working-directory: ./api
         run: |
           export PYTHONPATH="${PYTHONPATH}:$(pwd)"
           pytest tests/test_health.py -v
