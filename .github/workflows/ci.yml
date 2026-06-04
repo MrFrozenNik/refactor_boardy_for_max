@@ -19,9 +19,19 @@ jobs:
     needs: lint
     steps:
       - uses: actions/checkout@v4
-      - name: Create .env
+      - name: Create .env files
         run: |
+          # Корневой .env для docker-compose interpolation
           cat > .env << 'ENVEOF'
+          DB_USER=boardy
+          DB_PASSWORD=boardy_password
+          MYSQL_ROOT_PASSWORD=root_password
+          MYSQL_DATABASE=boardy_laravel
+          ENVEOF
+          sed -i 's/^[[:space:]]*//' .env
+          
+          # .env для Laravel (требуется в docker-compose.yml)
+          cat > boardy-laravel/.env << 'ENVEOF'
           APP_NAME=Boardy
           APP_ENV=testing
           APP_KEY=
@@ -31,12 +41,6 @@ jobs:
           DB_PORT=3306
           DB_DATABASE=boardy_laravel
           DB_USERNAME=boardy
-          DB_PASSWORD=boardy_password
-          MYSQL_ROOT_PASSWORD=root_password
-          MYSQL_DATABASE=boardy_laravel
-          MYSQL_USER=boardy
-          MYSQL_PASSWORD=boardy_password
-          DB_USER=boardy
           DB_PASSWORD=boardy_password
           REDIS_HOST=redis
           REDIS_PASSWORD=null
