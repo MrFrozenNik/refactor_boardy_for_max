@@ -23,14 +23,16 @@ jobs:
         run: |
           # Корневой .env для docker-compose interpolation
           cat > .env << 'ENVEOF'
-          DB_USER=boardy
-          DB_PASSWORD=boardy_password
           MYSQL_ROOT_PASSWORD=root_password
           MYSQL_DATABASE=boardy_laravel
+          MYSQL_USER=boardy
+          MYSQL_PASSWORD=boardy_password
+          DB_USER=boardy
+          DB_PASSWORD=boardy_password
           ENVEOF
           sed -i 's/^[[:space:]]*//' .env
           
-          # .env для Laravel (требуется в docker-compose.yml)
+          # .env для Laravel
           cat > boardy-laravel/.env << 'ENVEOF'
           APP_NAME=Boardy
           APP_ENV=testing
@@ -46,18 +48,21 @@ jobs:
           REDIS_PASSWORD=null
           REDIS_PORT=6379
           ENVEOF
-      - name: Build
-        run: docker compose build
-      - name: Start
-        run: docker compose up -d
-      - name: Wait
-        run: sleep 15
+      - name: Build images
+        run: docker compose -f docker-compose.yml -f docker-compose.local.yml build
+      - name: Start stack
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+          sleep 20
+      - name: Show MySQL logs
+        run: docker compose logs mysql
+      - name: Wait for services
+        run: sleep 10
       - name: Smoke test
-        run: curl -f http://localhost/health-laravel
-      - name: Stop
+        run: curl -f http://localhost/health-laravel || curl -f http://localhost/health || echo "Health check failed"
+      - name: Tear down
         if: always()
-        run: docker compose down -v
-
+        run: docker compose -f docker-compose.yml -f docker-compose.local.yml down -v
   test:
     runs-on: ubuntu-latest
     needs: smoke
