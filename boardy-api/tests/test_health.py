@@ -1,14 +1,18 @@
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi.testclient import TestClient
+# Добавляем корень проекта (где лежит main.py) в путь поиска модулей
+# __file__ = .../boardy-api/tests/test_health.py
+# dirname(dirname(...)) = .../boardy-api/
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Теперь импорт сработает
 from main import app
+from fastapi.testclient import TestClient
 
 client = TestClient(app)
 
-def test_health_endpoint_returns_ok():
+def test_health():
     response = client.get("/health")
     assert response.status_code == 200
-    # Проверяем только поле "ok", игнорируя остальные (гибкий тест)
-    assert response.json()["ok"] is True
+    assert response.json() == {"status": "ok"}
