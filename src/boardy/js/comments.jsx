@@ -215,7 +215,7 @@ const CommentsList = () => {
             body: {body},
             signal,
         });
-        await load(signal);
+        await load();
     }
 
     const handleDelete = async (id, signal) => {
