@@ -1,5 +1,5 @@
 const {useState, useEffect, useRef} = React;
-const API = 'https://api.comeblom.ai-info.ru';
+const API = 'http://localhost:3000';
 const PARENT_ID = 1;
 
 const client = axios.create({
@@ -179,18 +179,17 @@ const CommentsList = () => {
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState(null);
 
-    const load = async (signal) => {
+    const load = async () => {
         setLoading(true);
         setLoadError(null);
         try {
-            const data = await apiFetch(`/api/posts/${PARENT_ID}/comments`, {signal});
+            const data = await apiFetch(`/api/posts/${PARENT_ID}/comments`);
             setItems(data.items);
         } catch (e) {
-            if (axios.isCancel(e)) return;
             setLoadError('Не удалось загрузить комментарии.');
             console.error(e);
         } finally {
-            if (!signal?.aborted) setLoading(false);
+            setLoading(false);
         }
     };
 
@@ -206,7 +205,7 @@ const CommentsList = () => {
             body: {body: text},
             signal,
         });
-        await load(signal);
+        await load();
     }
 
     const handleSave = async (id, body, signal) => {
@@ -220,7 +219,7 @@ const CommentsList = () => {
 
     const handleDelete = async (id, signal) => {
         await apiFetch(`/api/comments/${id}`, {method: 'DELETE', signal});
-        await load(signal);
+        await load();
     }
 
     if (loading) return <span className="text-muted"> Загрузка..</span>;
