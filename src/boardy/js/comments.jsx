@@ -1,107 +1,251 @@
-const {useState, useEffect} = React;
+const {useState, useEffect, useRef} = React;
 const API = 'https://api.comeblom.ai-info.ru';
 const PARENT_ID = 1;
 
-function CommentsList() {
-    const [items, setItems] = useState([]);
-    const [text, setText] = useState('');
-    const [editId, setEditId] = useState(null);
-    const [editText, setEditText] = useState('');
-    const [loading, setLoading] = useState(false);
+const client = axios.create({
+    baseURL: API,
+    headers: {'Content-Type': 'application/json'},
+});
 
-    const load = async () => {
-        setLoading(true);
+async function apiFetch(path, {body, ...rest} = {}) {
+    const res = await client.request({
+        url: path,
+        data: body,
+        ...rest,
+    });
+    return res.status !== 204 ? res.data : null;
+}
+
+const CommentItem = ({item, onSave, onDelete}) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editText, setEditText] = useState(item.body);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState(null);
+    const controllerRef = useRef(null);
+
+
+    useEffect(() => {
+        return () => controllerRef.current?.abort();
+    }, []);
+
+    const startEdit = () => {
+        setEditText(item.body);
+        setIsEditing(true);
+        setError(null);
+    }
+
+    const cancelEdit = () => {
+        controllerRef.current?.abort();
+        setIsEditing(false);
+        setError(null);
+    }
+
+    const handleSave = async () => {
+        controllerRef.current?.abort();
+        const controller = new AbortController();
+        controllerRef.current = controller;
+
+        setSaving(true);
+        setError(null);
         try {
-            const res = await fetch(`${API}/api/posts/${PARENT_ID}/comments`);
-            const data = await res.json();
-            setItems(data.items);
+            await onSave(item.id, editText, controller.signal);
+            setIsEditing(false);
         } catch (e) {
-            console.error('Ошибка загрузки:', e);
+            if (axios.isCancel(e)) return;
+            setError('Не удалось сохранить комментарий');
+            console.error(e);
         } finally {
-            setLoading(false);
+            setSaving(false);
+        }
+    }
+
+    const handleDelete = async () => {
+        if (!confirm("Удалить комментарий?")) return;
+        const controller = new AbortController();
+        controllerRef.current = controller;
+        try {
+            await onDelete(item.id, controller.signal);
+        } catch (e) {
+            if (axios.isCancel(e)) return;
+            setError('Не удалось удалить комментарий');
+            console.error(e);
+        }
+    }
+
+    return (
+        <div className="card mb-2">
+            <div className="card-body">
+                <div className="d-flex justify-content-between">
+                    <strong>{item.author_name}</strong>
+                    <small className="text-muted">{item.created_at}</small>
+                </div>
+
+                {isEditing ? (
+                    <div className="mt-2">
+                        <div className="input-group">
+                            <input
+                                className="form-control form-control-sm"
+                                value={editText}
+                                onChange={e => setEditText(e.target.value)}
+                                disabled={saving}
+                            />
+                            <button
+                                className="btn btn-sm btn-success"
+                                onClick={handleSave}
+                                disabled={saving || !editText.trim()}
+                            >
+                                {saving ? '...' : '✓'}
+                            </button>
+                            <button
+                                className="btn btn-sm btn-secondary"
+                                onClick={cancelEdit}
+                                disabled={saving}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        {error && <div className="text-danger small mt-1">{error}</div>}
+                    </div>
+                ) : (
+                    <div>
+                        <p className="mb-1">{item.body}</p>
+                        <button className="btn btn-sm btn-outline-secondary me-1" onClick={startEdit}>
+                            ✏️
+                        </button>
+                        <button className="btn btn-sm btn-outline-danger" onClick={handleDelete}>
+                            🗑️
+                        </button>
+                        {error && <div className="text-danger small mt-1">{error}</div>}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+const CommentForm = ({onSubmit}) => {
+    const [text, setText] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState(null);
+    const controllerRef = useRef(null);
+
+    useEffect(() => {
+        return () => controllerRef.current?.abort();
+    }, []);
+
+    const submit = async () => {
+        if (!text.trim()) return;
+        controllerRef.current?.abort();
+        const controller = new AbortController();
+        controllerRef.current = controller;
+
+        setSubmitting(true);
+        setError(null);
+        try {
+            await onSubmit(text, controller.signal);
+            setText('');
+        } catch (e) {
+            if (axios.isCancel(e)) return;
+            setError('Не удалось отправить комментарий.');
+            console.error(e);
+        } finally {
+            setSubmitting(false);
         }
     };
 
-    useEffect(() => {
-        load();
-    }, []);
-
-    const add = async () => {
-        if (!text.trim()) return;
-        await fetch(`${API}/api/posts/${PARENT_ID}/comments`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({body: text})
-        });
-        setText('');
-        load();
-    };
-
-    const save = async (id) => {
-        await fetch(`${API}/api/comments/${id}`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({body: editText})
-        });
-        setEditId(null);
-        load();
-    };
-
-    const del = async (id) => {
-        if (!confirm('Удалить комментарий?')) return;
-        await fetch(`${API}/api/comments/${id}`, {method: 'DELETE'});
-        load();
-    };
-
     return (
-        <div>
-            {items.map(item => (
-                <div key={item.id} className="card mb-2">
-                    <div className="card-body">
-                        <div className="d-flex justify-content-between">
-                            <strong>{item.author_name}</strong>
-                            <small className="text-muted">{item.created_at}</small>
-                        </div>
-                        {editId === item.id ? (
-                            <div className="input-group mt-2">
-                                <input
-                                    className="form-control form-control-sm"
-                                    value={editText}
-                                    onChange={e => setEditText(e.target.value)}
-                                />
-                                <button className="btn btn-sm btn-success" onClick={() => save(item.id)}>✓</button>
-                                <button className="btn btn-sm btn-secondary" onClick={() => setEditId(null)}>✕</button>
-                            </div>
-                        ) : (
-                            <div>
-                                <p className="mb-1">{item.body}</p>
-                                <button className="btn btn-sm btn-outline-secondary me-1" onClick={() => {
-                                    setEditId(item.id);
-                                    setEditText(item.body);
-                                }}>✏️
-                                </button>
-                                <button className="btn btn-sm btn-outline-danger" onClick={() => del(item.id)}>🗑️
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            ))}
-
-            <div className="input-group mt-3">
+        <div className="mt-3">
+            <div className="input-group">
                 <input
                     className="form-control"
                     placeholder="Комментарий..."
                     value={text}
                     onChange={e => setText(e.target.value)}
-                    onKeyPress={e => e.key === 'Enter' && add()}
+                    onKeyPress={e => e.key === 'Enter' && submit()}
+                    disabled={submitting}
                 />
-                <button className="btn btn-primary" onClick={add} disabled={loading}>
-                    {loading ? '...' : 'Отправить'}
+                <button className="btn btn-primary" onClick={submit} disabled={submitting}>
+                    {submitting ? '...' : 'Отправить'}
                 </button>
             </div>
+            {error && <div className="text-danger small mt-1">{error}</div>}
         </div>
     );
+}
+
+
+const CommentsList = () => {
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState(null);
+
+    const load = async (signal) => {
+        setLoading(true);
+        setLoadError(null);
+        try {
+            const data = await apiFetch(`/api/posts/${PARENT_ID}/comments`, {signal});
+            setItems(data.items);
+        } catch (e) {
+            if (axios.isCancel(e)) return;
+            setLoadError('Не удалось загрузить комментарии.');
+            console.error(e);
+        } finally {
+            if (!signal?.aborted) setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const controller = new AbortController();
+        load(controller.signal);
+        return () => controller.abort();
+    }, []);
+
+    const handleAdd = async (text, signal) => {
+        await apiFetch(`/api/posts/${PARENT_ID}/comments`, {
+            method: 'POST',
+            body: {body: text},
+            signal,
+        });
+        await load(signal);
+    }
+
+    const handleSave = async (id, body, signal) => {
+        await apiFetch(`/api/comments/${id}`, {
+            method: 'PUT',
+            body: {body},
+            signal,
+        });
+        await load(signal);
+    }
+
+    const handleDelete = async (id, signal) => {
+        await apiFetch(`/api/comments/${id}`, {method: 'DELETE', signal});
+        await load(signal);
+    }
+
+    if (loading) return <span className="text-muted"> Загрузка..</span>;
+
+    return (<div>
+        {loadError && (
+            <div className="alert alert-danger d-flex justify-content-between align-items-center">
+                <span>{loadError}</span>
+                <button className="btn btn-sm btn-outline-danger" onClick={() => load()}>
+                    Повторить
+                </button>
+            </div>
+        )}
+
+        {items.map(item => (
+            <CommentItem
+                key={item.id}
+                item={item}
+                onSave={handleSave}
+                onDelete={handleDelete}
+            />
+        ))}
+
+        <CommentForm onSubmit={handleAdd}/>
+    </div>);
 }
 
 ReactDOM.createRoot(document.getElementById('app')).render(<CommentsList/>);
